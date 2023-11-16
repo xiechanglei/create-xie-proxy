@@ -1,0 +1,15 @@
+{
+  "name": "create-xie-proxy",
+  "version": "1.0.6",
+  "description": "a http proxy",
+  "main": "index.js",
+  "author": "xiechanglei",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "create-xie-proxy": "./server.js"
+  },
+  "dependencies": {
+    "chalk": "^5.3.0"
+  }
+}
