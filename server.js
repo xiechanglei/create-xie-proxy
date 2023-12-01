@@ -1,22 +1,42 @@
 #!/usr/bin/env node
 
-import chalk from "chalk";
 import http from "http";
 import fs from "fs";
 import path from "path";
+import {info, success, error} from "./log.js"
 import {getContentType} from "./content-type.js";
+import {getConfig} from "./config.js";
 
-const defaultPort = 9123
-const [, , listenPort = defaultPort] = process.argv;
-
-const info = msg => console.log(chalk.blue(msg))
-const error = msg => console.log(chalk.red(msg))
-const success = msg => console.log(chalk.green(msg))
-
-
+const config = await getConfig();
 const server = http.createServer()
+console.log("")
+
 // 处理请求
 server.on('request', (req, res) => {
+    if (config.proxy) {
+        for (let prefix of config.proxy) {
+            const target = config.proxy[prefix];
+            if (req.url.startsWith(prefix)) {
+                //代理处理
+                const options = {
+                    hostname: new URL(target).hostname,
+                    port: new URL(target).port,
+                    path: req.url.replace(prefix, "/"),
+                    method: req.method,
+                    headers: req.headers
+                };
+                const proxyReq = http.request(options, (proxyRes) => {
+                    //设置跨域
+                    res.setHeader("Access-Control-Allow-Origin", "*");
+                    res.setHeader("Content-Type", proxyRes.headers["content-type"]);
+                    proxyRes.pipe(res);
+                });
+                req.pipe(proxyReq);
+                return;
+            }
+        }
+    }
+    //本地处理
     // 截断请求参数
     let uri = req.url.split("?")[0];
     uri = uri.replace(/\/$/, "/index.html");
@@ -42,15 +62,12 @@ server.on('request', (req, res) => {
 //错误处理
 server.on('error', (err) => {
     if (err.code === 'EADDRINUSE') {
-        error(`server start failed: port ${listenPort} is in used`);
+        error(`server start failed: port ${config.port} is in used`);
     } else {
         error(err);
     }
 
 });
-
-
-console.log("")
 //监听端口
-server.listen(listenPort, () => info(`server is running at port ${listenPort}，waiting for request ...`));
+server.listen(config.port, () => info(`server is running at port ${config.port}，waiting for request ...`));
 

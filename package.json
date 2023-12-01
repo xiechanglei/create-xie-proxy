@@ -1,6 +1,6 @@
 {
   "name": "create-xie-proxy",
-  "version": "1.0.6",
+  "version": "1.0.9",
   "description": "a http proxy",
   "main": "index.js",
   "author": "xiechanglei",
