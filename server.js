@@ -14,7 +14,7 @@ console.log("")
 // 处理请求
 server.on('request', (req, res) => {
     if (config.proxy) {
-        for (let prefix of config.proxy) {
+        for (let prefix in config.proxy) {
             const target = config.proxy[prefix];
             if (req.url.startsWith(prefix)) {
                 //代理处理

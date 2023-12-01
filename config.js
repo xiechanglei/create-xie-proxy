@@ -14,5 +14,6 @@ export const getConfig = async () => {
         const configJson = JSON.parse(content);
         Object.assign(config, configJson);
     }
+    console.log("config", config)
     return config;
 }

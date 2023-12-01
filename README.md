@@ -19,7 +19,12 @@ yarn create xie-proxy 9999
 ```
 
 配置文件,读取当前路径下 xie.proxy.config.json 文件
-```javascript
-    
+```json
+    {
+    "port": 9999,
+    "proxy": {
+        "/api/": "http://192.168.16.79:8041/"
+    }
+}
 ```
 
