@@ -16,19 +16,35 @@ server.on('request', (req, res) => {
     if (config.proxy) {
         for (let prefix in config.proxy) {
             const target = config.proxy[prefix];
+            req.headers["Host"] = `${target.hostname}:${target.port}`
+            const options = {
+                hostname: target.hostname,
+                port: target.port,
+                path: req.url.replace(prefix, target.pathname),
+                method: req.method,
+                headers: req.headers
+            };
             if (req.url.startsWith(prefix)) {
                 //代理处理
-                const options = {
-                    hostname: target.hostname,
-                    port: target.port,
-                    path: req.url.replace(prefix, target.pathname),
-                    method: req.method,
-                    headers: req.headers
-                };
+                if (target.protocol === "ws") {
+                    //websocket 代理
+                    const proxyReq = http.request(options)
+                    proxyReq.on("upgrade", (proxyRes, proxySocket, proxyHead) => {
+                        res.writeHeader(proxyRes.statusCode, proxyRes.headers);
+                        res.write(proxyHead);
+                        proxySocket.pipe(res);
+                        res.pipe(proxySocket);
+                    })
+                    req.pipe(proxyReq);
+                }
+
+            } else {
                 const proxyReq = http.request(options, (proxyRes) => {
                     //设置跨域
+                    for (let headerName in proxyRes.headers) {
+                        res.setHeader(headerName, proxyRes.headers[headerName]);
+                    }
                     res.setHeader("Access-Control-Allow-Origin", "*");
-                    res.setHeader("Content-Type", proxyRes.headers["content-type"]);
                     proxyRes.pipe(res);
                 });
                 req.pipe(proxyReq);
