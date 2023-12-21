@@ -19,9 +19,9 @@ server.on('request', (req, res) => {
             if (req.url.startsWith(prefix)) {
                 //代理处理
                 const options = {
-                    hostname: new URL(target).hostname,
-                    port: new URL(target).port,
-                    path: req.url.replace(prefix, "/"),
+                    hostname: target.hostname,
+                    port: target.port,
+                    path: req.url.replace(prefix, target.pathname),
                     method: req.method,
                     headers: req.headers
                 };

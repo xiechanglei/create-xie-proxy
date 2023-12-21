@@ -12,8 +12,12 @@ export const getConfig = async () => {
     if (fs.existsSync(configPath)) {
         const content = await fs.promises.readFile(configPath, "utf-8");
         const configJson = JSON.parse(content);
+        if (configJson.proxy !== undefined) {
+            for (let prefix in configJson.proxy) {
+                configJson.proxy[prefix] = new URL(configJson.proxy[prefix]);
+            }
+        }
         Object.assign(config, configJson);
     }
-    console.log("config", config)
     return config;
 }
