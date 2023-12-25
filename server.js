@@ -11,44 +11,33 @@ const config = await getConfig();
 const server = http.createServer()
 console.log("")
 
+const errorFilePath = path.join(process.cwd(), "xie.proxy.404.log");
+
 // 处理请求
 server.on('request', (req, res) => {
     if (config.proxy) {
         for (let prefix in config.proxy) {
-            const target = config.proxy[prefix];
-            req.headers["Host"] = `${target.hostname}:${target.port}`
-            const options = {
-                hostname: target.hostname,
-                port: target.port,
-                path: req.url.replace(prefix, target.pathname),
-                method: req.method,
-                headers: req.headers
-            };
             if (req.url.startsWith(prefix)) {
-                //代理处理
-                if (target.protocol === "ws") {
-                    //websocket 代理
-                    const proxyReq = http.request(options)
-                    proxyReq.on("upgrade", (proxyRes, proxySocket, proxyHead) => {
-                        res.writeHeader(proxyRes.statusCode, proxyRes.headers);
-                        res.write(proxyHead);
-                        proxySocket.pipe(res);
-                        res.pipe(proxySocket);
-                    })
-                    req.pipe(proxyReq);
-                }
-
-            } else {
+                const target = config.proxy[prefix];
+                req.headers["Host"] = `${target.hostname}:${target.port}`
+                const options = {
+                    hostname: target.hostname,
+                    port: target.port,
+                    path: req.url.replace(prefix, target.pathname),
+                    method: req.method,
+                    headers: req.headers
+                };
                 const proxyReq = http.request(options, (proxyRes) => {
                     //设置跨域
                     for (let headerName in proxyRes.headers) {
                         res.setHeader(headerName, proxyRes.headers[headerName]);
                     }
+                    res.statusCode = proxyRes.statusCode;
                     res.setHeader("Access-Control-Allow-Origin", "*");
                     proxyRes.pipe(res);
                 });
                 req.pipe(proxyReq);
-                return;
+                return
             }
         }
     }
@@ -63,6 +52,11 @@ server.on('request', (req, res) => {
         if (err || !stats.isFile()) {
             res.statusCode = 404;
             res.end(filePath + " not found");
+            fs.appendFile(errorFilePath, `${req.socket.encrypted ? "https" : "http"}://${req.headers.host}${req.url}\n`, (err) => {
+                if (err) {
+                    error(err);
+                }
+            });
         } else {
             // 设置跨域
             res.setHeader("Access-Control-Allow-Origin", "*");
@@ -73,6 +67,19 @@ server.on('request', (req, res) => {
         const log = res.statusCode === 200 ? success : error
         log(message)
     })
+})
+
+//处理websocket
+server.on('upgrade', (req, socket, head) => {
+    if (config.proxy) {
+        for (let prefix in config.proxy) {
+            if (req.url.startsWith(prefix)) {
+                //转发到目标服务器
+                const target = config.proxy[prefix];
+                const newUrl = req.url.replace(prefix, target.pathname);
+            }
+        }
+    }
 })
 
 //错误处理
